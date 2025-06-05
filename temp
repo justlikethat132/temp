@@ -1,0 +1,228 @@
+// main.tsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+// App.tsx
+import React from 'react';
+import Form from './Form';
+
+function App() {
+  return (
+    <div className="min-h-screen bg-gray-100 p-4">
+      <h1 className="text-2xl font-bold mb-4">Workshop Feedback Form</h1>
+      <Form />
+    </div>
+  );
+}
+
+export default App;
+
+// Form.tsx
+import React, { useState } from 'react';
+import Papa from 'papaparse';
+
+const initialState = {
+  eonid: '',
+  namespace: '',
+  location: '',
+  shortid: '',
+  primaryItso: '',
+  superDept: '',
+  jira: '',
+  workshop: '',
+  gitStatus: '',
+  linksDecoded: '',
+  releaseLinksDecoded: '',
+  vmStatus: '',
+  tcm: '',
+  pipelineStatus: '',
+  rating: '',
+  feedback: '',
+};
+
+function Form() {
+  const [form, setForm] = useState(initialState);
+  const [submittedData, setSubmittedData] = useState<any[]>([]);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const validate = () => {
+    const newErrors: { [key: string]: string } = {};
+    const urlPattern = /^https?:\/\/.+/;
+    const namespacePattern = /^\w+\/\w+$/;
+    const primaryItsoPattern = /^.+\(.+\)$/;
+
+    if (!form.eonid) newErrors.eonid = 'EONID is required';
+    if (!form.namespace) newErrors.namespace = 'Namespace is required';
+    else if (!namespacePattern.test(form.namespace)) newErrors.namespace = 'Invalid namespace format';
+    if (!form.location) newErrors.location = 'Location is required';
+    if (!form.shortid) newErrors.shortid = 'Participant shortid is required';
+    if (!form.primaryItso) newErrors.primaryItso = 'Primary ITSO is required';
+    else if (!primaryItsoPattern.test(form.primaryItso)) newErrors.primaryItso = 'Invalid ITSO format';
+    if (!form.superDept) newErrors.superDept = 'Super department is required';
+    if (!form.jira) newErrors.jira = 'Jira URL is required';
+    else if (!urlPattern.test(form.jira)) newErrors.jira = 'Invalid Jira URL';
+    if (!form.workshop) newErrors.workshop = 'Workshop selection is required';
+    if (!form.gitStatus) newErrors.gitStatus = 'Git status is required';
+    if (!form.linksDecoded) newErrors.linksDecoded = 'Links decoded is required';
+    else if (isNaN(+form.linksDecoded)) newErrors.linksDecoded = 'Must be a number';
+    if (!form.releaseLinksDecoded) newErrors.releaseLinksDecoded = 'Release links decoded is required';
+    else if (isNaN(+form.releaseLinksDecoded)) newErrors.releaseLinksDecoded = 'Must be a number';
+    if (!form.vmStatus) newErrors.vmStatus = 'VM status is required';
+    if (!form.tcm) newErrors.tcm = 'TCM is required';
+    if (!form.pipelineStatus) newErrors.pipelineStatus = 'Pipeline status is required';
+    if (!form.rating) newErrors.rating = 'Rating is required';
+    if (!form.feedback) newErrors.feedback = 'Feedback is required';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setSubmittedData([...submittedData, form]);
+    setForm(initialState);
+  };
+
+  const downloadCSV = () => {
+    const csv = Papa.unparse(submittedData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'form_entries.csv';
+    link.click();
+  };
+
+  const renderError = (field: string) => errors[field] && <p className="text-red-500 text-sm">{errors[field]}</p>;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label>EONID *</label>
+        <input name="eonid" value={form.eonid} onChange={handleChange} className="p-2 border w-full" />
+        {renderError('eonid')}
+      </div>
+      <div>
+        <label>Namespace (meta/proj) *</label>
+        <input name="namespace" value={form.namespace} onChange={handleChange} className="p-2 border w-full" />
+        {renderError('namespace')}
+      </div>
+      <div>
+        <label>Location *</label>
+        {['bengaluru', 'mumbai', 'new york', 'other'].map((loc) => (
+          <label key={loc} className="mr-4">
+            <input type="radio" name="location" value={loc} onChange={handleChange} checked={form.location === loc} /> {loc}
+          </label>
+        ))}
+        {renderError('location')}
+      </div>
+      <div>
+        <label>Participant Short ID *</label>
+        <input name="shortid" value={form.shortid} onChange={handleChange} className="p-2 border w-full" />
+        {renderError('shortid')}
+      </div>
+      <div>
+        <label>Primary ITSO Name and Login ID *</label>
+        <input name="primaryItso" value={form.primaryItso} onChange={handleChange} className="p-2 border w-full" />
+        {renderError('primaryItso')}
+      </div>
+      <div>
+        <label>Super Department Name *</label>
+        <input name="superDept" value={form.superDept} onChange={handleChange} className="p-2 border w-full" />
+        {renderError('superDept')}
+      </div>
+      <div>
+        <label>Jira Link *</label>
+        <input name="jira" value={form.jira} onChange={handleChange} className="p-2 border w-full" />
+        {renderError('jira')}
+      </div>
+      <div>
+        <label>Workshop Attended *</label>
+        <select name="workshop" value={form.workshop} onChange={handleChange} className="p-2 border w-full">
+          <option value="">Select</option>
+          {["21st feb", "27th feb", "4th apr", "28th may", "29th may"].map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+        {renderError('workshop')}
+      </div>
+      <div>
+        <label>Was Git (Bitbucket/Github) deleted? *</label>
+        {['yes', 'no, faced issues', 'no, it did not exist'].map((opt) => (
+          <label key={opt} className="mr-4">
+            <input type="radio" name="gitStatus" value={opt} onChange={handleChange} checked={form.gitStatus === opt} /> {opt}
+          </label>
+        ))}
+        {renderError('gitStatus')}
+      </div>
+      <div>
+        <label>No. of Links Decoded *</label>
+        <input name="linksDecoded" value={form.linksDecoded} onChange={handleChange} className="p-2 border w-full" />
+        {renderError('linksDecoded')}
+      </div>
+      <div>
+        <label>No. of Release Links Decoded *</label>
+        <input name="releaseLinksDecoded" value={form.releaseLinksDecoded} onChange={handleChange} className="p-2 border w-full" />
+        {renderError('releaseLinksDecoded')}
+      </div>
+      <div>
+        <label>Was VMs/Docker/Podman Releases/Images and Project Deleted? *</label>
+        {['yes', 'no, faced issues', 'no, it did not exist', 'pending tcm'].map((opt) => (
+          <label key={opt} className="mr-4">
+            <input type="radio" name="vmStatus" value={opt} onChange={handleChange} checked={form.vmStatus === opt} /> {opt}
+          </label>
+        ))}
+        {renderError('vmStatus')}
+      </div>
+      <div>
+        <label>TCM Number, if any *</label>
+        <input name="tcm" value={form.tcm} onChange={handleChange} className="p-2 border w-full" />
+        {renderError('tcm')}
+      </div>
+      <div>
+        <label>Was CI/CD Pipeline Deleted? *</label>
+        {['yes', 'no, faced issues', 'no,it did not exist'].map((opt) => (
+          <label key={opt} className="mr-4">
+            <input type="radio" name="pipelineStatus" value={opt} onChange={handleChange} checked={form.pipelineStatus === opt} /> {opt}
+          </label>
+        ))}
+        {renderError('pipelineStatus')}
+      </div>
+      <div>
+        <label>How Would You Rate the Workshop? *</label>
+        <input name="rating" value={form.rating} onChange={handleChange} className="p-2 border w-full" />
+        {renderError('rating')}
+      </div>
+      <div>
+        <label>Please Provide Your Feedback/Suggestion *</label>
+        <textarea name="feedback" value={form.feedback} onChange={handleChange} className="p-2 border w-full"></textarea>
+        {renderError('feedback')}
+      </div>
+      <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">Submit</button>
+      {submittedData.length > 0 && (
+        <button
+          type="button"
+          onClick={downloadCSV}
+          className="ml-4 bg-green-500 text-white px-4 py-2 rounded"
+        >
+          Download CSV
+        </button>
+      )}
+    </form>
+  );
+}
+
+export default Form;
